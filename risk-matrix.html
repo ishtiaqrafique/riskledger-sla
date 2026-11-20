@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Risk Matrix & Register</title>
+<style>
+  :root{
+    --serious:#b83830; --medium:#f0aa48; --low:#93c58a;
+    --analysis:#5fb3b3; --treatment:#b39ddb;
+    --text:#222; --muted:#666; --axis:#333; --grid:#c9c9c9; --bg:#fff; --line:#e3e3e3; --head:#f5f6f8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px 16px;background:var(--bg);font-family:"Segoe UI",Roboto,Arial,sans-serif;color:var(--text)}
+  .page{max-width:1100px;margin:0 auto}
+  h2{font-size:22px;margin:40px 0 12px}
+
+  /* ---------- Matrix ---------- */
+  .rm-legend{display:flex;justify-content:center;gap:28px;margin-bottom:14px;font-size:18px}
+  .rm-legend span{display:flex;align-items:center;gap:10px}
+  .rm-legend i{width:26px;height:26px;border-radius:50%;display:inline-block}
+  .rm-wrap{display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto 1fr auto;column-gap:14px}
+  .rm-ytitle{grid-column:1;grid-row:1;font-size:18px;margin-bottom:8px;padding-left:20px}
+  .rm-ylabels{grid-column:1;grid-row:2;display:grid;grid-template-rows:repeat(3,1fr);font-size:18px}
+  .rm-ylabels div{display:flex;align-items:center;justify-content:flex-end;padding-right:4px}
+  .rm-grid{grid-column:2;grid-row:2;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,minmax(150px,1fr));
+    border-left:2px solid var(--axis);border-bottom:2px solid var(--axis)}
+  .rm-cell{border:1px solid var(--grid);display:flex;flex-direction:column;align-items:center;padding-top:14px;color:#fff}
+  .rm-cell h4{margin:0 0 22px;font-size:20px;font-weight:600}
+  .rm-cell.serious{background:var(--serious)} .rm-cell.medium{background:var(--medium)} .rm-cell.low{background:var(--low)}
+  .rm-dots{display:flex;gap:12px}
+  .rm-dot{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;
+    font-family:inherit;font-size:24px;font-weight:700;color:#fff;cursor:pointer;opacity:.9;transition:transform .15s,box-shadow .15s}
+  .rm-dot:hover{transform:scale(1.1);opacity:1}
+  .rm-dot.active{box-shadow:0 0 0 4px #fff,0 0 0 6px #222;opacity:1}
+  .rm-dot.analysis{background:var(--analysis)} .rm-dot.treatment{background:var(--treatment)}
+  .rm-xlabels{grid-column:2;grid-row:3;display:grid;grid-template-columns:repeat(3,1fr);text-align:center;font-size:18px;padding-top:12px}
+  .rm-xtitle{grid-column:3;grid-row:2;writing-mode:vertical-rl;transform:rotate(180deg);align-self:end;font-size:18px}
+
+  /* ---------- Register ---------- */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+  .toolbar input,.toolbar select{padding:8px 10px;border:1px solid #ccc;border-radius:6px;font:inherit;font-size:14px}
+  .toolbar input{flex:1;min-width:180px}
+  .chip{display:none;align-items:center;gap:8px;background:#222;color:#fff;border-radius:16px;padding:6px 12px;font-size:13px}
+  .chip button{background:none;border:none;color:#fff;cursor:pointer;font-size:15px;padding:0}
+  .count{font-size:13px;color:var(--muted);margin-left:auto}
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:900px}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{background:var(--head);font-weight:600;position:sticky;top:0;cursor:pointer;white-space:nowrap;user-select:none}
+  tbody tr:hover{background:#fafafa}
+  .id{font-family:Consolas,monospace;color:var(--muted);white-space:nowrap}
+  .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
+  .badge.serious{background:var(--serious)} .badge.medium{background:var(--medium)} .badge.low{background:#5e9e55}
+  .badge.analysis{background:var(--analysis)} .badge.treatment{background:var(--treatment)}
+  .lvl{white-space:nowrap}
+  .sub{color:var(--muted);font-size:12px;margin-top:3px}
+
+  @media (max-width:640px){
+    .rm-grid{grid-template-rows:repeat(3,minmax(100px,1fr))}
+    .rm-cell h4{font-size:13px;margin-bottom:10px}
+    .rm-dot{width:34px;height:34px;font-size:15px}
+    .rm-dots{gap:6px}
+    .rm-ylabels,.rm-xlabels,.rm-ytitle,.rm-xtitle,.rm-legend{font-size:13px}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div id="riskMatrix"></div>
+
+  <h2>Risk Register</h2>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Search risks, owners, controls…">
+    <select id="fCat"><option value="">All categories</option></select>
+    <select id="fStage"><option value="">All stages</option><option value="analysis">Analysis</option><option value="treatment">Treatment</option></select>
+    <span class="chip" id="chip"><span id="chipText"></span><button id="chipX" title="Clear matrix filter">✕</button></span>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th data-k="id">ID</th><th data-k="title">Risk</th><th data-k="category">Category</th><th data-k="owner">Owner</th>
+        <th data-k="impact">Impact</th><th data-k="likelihood">Likelihood</th><th data-k="score">Rating</th>
+        <th data-k="stage">Stage</th><th data-k="treatment">Treatment / Control</th><th data-k="due">Review date</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+/* ---- Matrix config: level per cell [impact][likelihood] (0=Low,1=Medium,2=High) ---- */
+const LEVELS = [
+  ['low','low','medium'],          // Impact Low
+  ['medium','serious','serious'],  // Impact Medium
+  ['serious','serious','serious'], // Impact High
+];
+const NAMES = {low:'Low Risk', medium:'Medium Risk', serious:'Serious Risk'};
+const AXIS  = ['Low','Medium','High'];
+const L=0, M=1, H=2;
+
+/* ---- Sample risk register (replace with fetch('/api/risks')) ----
+   [title, category, owner, impact, likelihood, stage, treatment/control, review date] */
+const SAMPLE = [
+  // Impact High · Likelihood Low
+  ['Ransomware encrypts file servers','Cybersecurity','InfoSec Officer',H,L,'analysis','Assess offline backup coverage and EDR rollout gaps','2026-12-15'],
+  ['Data centre fire / power failure','Business Continuity','IT Infrastructure Lead',H,L,'analysis','Review DR site readiness and UPS capacity','2027-01-10'],
+  ['Compromise of domain admin account','Identity & Access','System Administrator',H,L,'analysis','Evaluate tiered admin model and PAM options','2026-12-20'],
+  ['Oracle EBS database corruption','Applications','ERP Lead',H,L,'analysis','Validate RMAN backup restore testing','2027-01-05'],
+  ['Loss of core switch at head office','Network','Network Administrator',H,L,'treatment','Procure redundant core switch; HA config','2026-12-31'],
+  ['Mass phishing leading to credential theft','Cybersecurity','InfoSec Officer',H,L,'treatment','Enforce Office 365 MFA; awareness training','2026-12-10'],
+  ['Unpatched internet-facing server exploited','Vulnerability Mgmt','System Administrator',H,L,'treatment','Monthly OpenVAS scans + patch SLA','2026-12-05'],
+  ['Insider exfiltration via USB','Data Protection','InfoSec Officer',H,L,'treatment','Guardware DLP USB blocking policy','2026-12-12'],
+  ['FortiGate firewall misconfiguration','Network','Network Administrator',H,L,'treatment','Change approval + quarterly rule review','2027-01-15'],
+  ['Backup jobs silently failing','Business Continuity','IT Infrastructure Lead',H,L,'treatment','Daily backup monitoring and alerts','2026-12-08'],
+  ['ESXi host compromise','Infrastructure','System Administrator',H,L,'treatment','Isolate management network; harden hosts','2026-12-18'],
+  ['Legacy AV unable to detect modern threats','Endpoint','Endpoint Lead',H,L,'treatment','Migrate Trend Micro to Kaspersky EDR Optimum','2026-12-22'],
+  // Impact High · Likelihood Medium
+  ['Business email compromise / invoice fraud','Cybersecurity','InfoSec Officer',H,M,'analysis','Assess mail flow rules and payment verification','2026-12-14'],
+  ['Shared/generic accounts used for ERP','Identity & Access','ERP Lead',H,M,'analysis','Review EBS user list for shared IDs','2027-01-08'],
+  ['No centralised log monitoring (SOC)','Security Operations','InfoSec Officer',H,M,'analysis','Scope Wazuh-based AI SOC','2027-01-20'],
+  ['Weak passwords stored in spreadsheets','Identity & Access','System Administrator',H,M,'analysis','Evaluate Passbolt adoption across teams','2026-12-30'],
+  ['Single ISP link for head office','Network','Network Administrator',H,M,'analysis','Assess secondary ISP + SD-WAN failover','2027-01-12'],
+  ['Unauthorised cloud file sharing','Data Protection','InfoSec Officer',H,M,'treatment','SharePoint external sharing restrictions','2026-12-16'],
+  ['Expired M365 licences disrupt users','Licensing','IT Manager',H,M,'treatment','Track renewal timeline; budget approval','2026-12-01'],
+  // Impact Medium · Likelihood Low
+  ['Wi-Fi bandwidth abuse on guest SSID','Network','Network Administrator',M,L,'analysis','Review Ruckus traffic stats per SSID','2027-01-03'],
+  ['Outdated asset inventory','Asset Management','IT Support Lead',M,L,'analysis','Reconcile desktop prep checklist with AD','2026-12-28'],
+  ['Software licence non-compliance','Licensing','IT Manager',M,L,'analysis','Audit installed software vs entitlements','2027-01-18'],
+  ['Vendor remote access not monitored','Third Party','InfoSec Officer',M,L,'analysis','Inventory vendor VPN accounts','2026-12-26'],
+  ['Printer/scanner firmware vulnerabilities','Endpoint','IT Support Lead',M,L,'analysis','Scan MFPs; check firmware levels','2027-01-22'],
+  ['Records retention not defined','Governance','Records Officer',M,L,'analysis','Draft retention schedule for RMS','2027-02-01'],
+  ['Key IT staff dependency','People','IT Manager',M,L,'analysis','Identify single points of knowledge','2027-01-25'],
+  ['Domain/SSL certificate expiry','Infrastructure','System Administrator',M,L,'analysis','Build certificate expiry tracker','2026-12-19'],
+  ['CCTV DVRs exposed on network','Physical Security','Network Administrator',M,L,'analysis','Segment CCTV VLAN; change defaults','2027-01-14'],
+  ['Rogue DHCP / unmanaged devices','Network','Network Administrator',M,L,'treatment','DHCP snooping; NAC review','2026-12-11'],
+  ['Local admin rights on user PCs','Endpoint','System Administrator',M,L,'treatment','Remove local admin via GPO + LAPS','2026-12-09'],
+  ['Windows Firewall disabled on endpoints','Endpoint','System Administrator',M,L,'treatment','Domain-wide firewall GPO','2026-12-13'],
+  ['Inconsistent desktop build standards','Asset Management','IT Support Lead',M,L,'treatment','Desktop preparation verification checklist','2026-12-04'],
+  ['Software deployed manually / unpatched apps','Endpoint','IT Support Lead',M,L,'treatment','opsi software deployment server','2027-01-06'],
+  ['Policies not reviewed annually','Governance','IT Manager',M,L,'treatment','Track policies and reviews in Eramba GRC','2027-01-30'],
+  ['ISO 9001 IT CA/PA not closed','Compliance','IT Manager',M,L,'treatment','Collect job descriptions; close CA/PA','2026-12-02'],
+  ['Staff unaware of security policies','People','InfoSec Officer',M,L,'treatment','Monthly awareness posters and emails','2026-12-17'],
+  ['Change management not documented','Governance','IT Manager',M,L,'treatment','Introduce change request form','2027-01-09'],
+  // Impact Medium · Likelihood Medium
+  ['Helpdesk tickets not tracked','Service Management','IT Support Lead',M,M,'analysis','Evaluate ticketing tool options','2027-01-16'],
+  ['Shadow IT SaaS subscriptions','Governance','IT Manager',M,M,'analysis','Survey departments for SaaS usage','2027-01-28'],
+  ['Email delivery issues across O365/Google','Applications','System Administrator',M,M,'analysis','Review SPF/DKIM/DMARC on all domains','2026-12-23'],
+  // Impact Medium · Likelihood High
+  ['Spam and malicious attachments reaching users','Cybersecurity','InfoSec Officer',M,H,'analysis','Analyse mail filter effectiveness','2026-12-07'],
+  ['Website defacement / malware injection','Applications','Web Administrator',M,H,'treatment','WordPress hardening + third-party scan','2026-12-06'],
+  ['Outdated end-of-life OS on PCs','Endpoint','IT Support Lead',M,H,'treatment','Replace/upgrade Windows 7/8 machines','2027-02-15'],
+  // Impact Low · Likelihood Low
+  ['Meeting room AV equipment failure','Facilities IT','IT Support Lead',L,L,'treatment','Keep spare HDMI/adapters; quarterly checks','2027-02-10'],
+];
+
+/* API returns rows: {id, title, category, owner, impact, likelihood, stage, treatment, due}
+   impact/likelihood: 0|1|2 or 'Low'|'Medium'|'High' */
+const API_URL = '/api/risks';
+const toLvl = v => typeof v==='number' ? v : AXIS.findIndex(a=>a.toLowerCase()===String(v).toLowerCase());
+const enrich = r => { r.impact=toLvl(r.impact); r.likelihood=toLvl(r.likelihood);
+  r.stage=String(r.stage).toLowerCase(); r.due=r.due?String(r.due).slice(0,10):'';
+  r.level=LEVELS[r.impact][r.likelihood]; r.score=(r.impact+1)*(r.likelihood+1); return r; };
+let risks = SAMPLE.map((r,i)=>enrich({
+  id:'RSK-'+String(i+1).padStart(3,'0'), title:r[0], category:r[1], owner:r[2],
+  impact:r[3], likelihood:r[4], stage:r[5], treatment:r[6], due:r[7]
+}));
+
+/* ---------- Matrix ---------- */
+let cellFilter = null;
+function renderMatrix(el){
+  const count = {};
+  risks.forEach(r => { const k=`${r.impact}-${r.likelihood}-${r.stage}`; count[k]=(count[k]||0)+1; });
+  let cells = '';
+  for (let imp=2; imp>=0; imp--) for (let lik=0; lik<3; lik++) {
+    const lvl = LEVELS[imp][lik];
+    const dots = ['analysis','treatment'].map(s=>{
+      const n = count[`${imp}-${lik}-${s}`];
+      if(!n) return '';
+      const act = cellFilter && cellFilter.impact===imp && cellFilter.likelihood===lik && cellFilter.stage===s ? ' active':'';
+      return `<button class="rm-dot ${s}${act}" data-i="${imp}" data-l="${lik}" data-s="${s}"
+               title="${n} risk(s) in ${s} — Impact ${AXIS[imp]}, Likelihood ${AXIS[lik]}">${n}</button>`;
+    }).join('');
+    cells += `<div class="rm-cell ${lvl}"><h4>${NAMES[lvl]}</h4><div class="rm-dots">${dots}</div></div>`;
+  }
+  el.innerHTML = `
+    <div class="rm-legend">
+      <span><i style="background:var(--analysis)"></i>Analysis</span>
+      <span><i style="background:var(--treatment)"></i>Treatment</span>
+    </div>
+    <div class="rm-wrap">
+      <div class="rm-ytitle">Impact</div>
+      <div class="rm-ylabels">${[...AXIS].reverse().map(a=>`<div>${a}</div>`).join('')}</div>
+      <div class="rm-grid">${cells}</div>
+      <div class="rm-xtitle">Likelihood</div>
+      <div class="rm-xlabels">${AXIS.map(a=>`<div>${a}</div>`).join('')}</div>
+    </div>`;
+  el.querySelectorAll('.rm-dot').forEach(d=>d.addEventListener('click',()=>{
+    const f={impact:+d.dataset.i, likelihood:+d.dataset.l, stage:d.dataset.s};
+    const same = cellFilter && cellFilter.impact===f.impact && cellFilter.likelihood===f.likelihood && cellFilter.stage===f.stage;
+    cellFilter = same ? null : f;
+    renderMatrix(el); renderTable();
+    if(cellFilter) document.querySelector('h2').scrollIntoView({behavior:'smooth'});
+  }));
+}
+
+/* ---------- Register table ---------- */
+let sortKey='score', sortDir=-1;
+const $ = id=>document.getElementById(id);
+function fillCategories(){
+  $('fCat').innerHTML='<option value="">All categories</option>';
+  [...new Set(risks.map(r=>r.category))].sort().forEach(c=>$('fCat').insertAdjacentHTML('beforeend',`<option>${esc(c)}</option>`));
+}
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function renderTable(){
+  const q=$('q').value.toLowerCase(), cat=$('fCat').value, st=$('fStage').value;
+  let list = risks.filter(r=>
+    (!q || [r.id,r.title,r.category,r.owner,r.treatment].join(' ').toLowerCase().includes(q)) &&
+    (!cat || r.category===cat) && (!st || r.stage===st) &&
+    (!cellFilter || (r.impact===cellFilter.impact && r.likelihood===cellFilter.likelihood && r.stage===cellFilter.stage)));
+  list.sort((a,b)=>{const x=a[sortKey],y=b[sortKey]; return (x>y?1:x<y?-1:0)*sortDir || a.id.localeCompare(b.id);});
+
+  $('rows').innerHTML = list.map(r=>`<tr>
+    <td class="id">${r.id}</td>
+    <td>${esc(r.title)}</td>
+    <td>${esc(r.category)}</td>
+    <td>${esc(r.owner)}</td>
+    <td>${AXIS[r.impact]}</td>
+    <td>${AXIS[r.likelihood]}</td>
+    <td class="lvl"><span class="badge ${r.level}">${NAMES[r.level]}</span><div class="sub">Score ${r.score}/9</div></td>
+    <td><span class="badge ${r.stage}">${r.stage[0].toUpperCase()+r.stage.slice(1)}</span></td>
+    <td>${esc(r.treatment)}</td>
+    <td style="white-space:nowrap">${r.due}</td></tr>`).join('') ||
+    `<tr><td colspan="10" style="text-align:center;color:#888;padding:24px">No risks match the filters</td></tr>`;
+
+  $('count').textContent = `${list.length} of ${risks.length} risks`;
+  $('chip').style.display = cellFilter ? 'inline-flex':'none';
+  if(cellFilter) $('chipText').textContent =
+    `Impact ${AXIS[cellFilter.impact]} · Likelihood ${AXIS[cellFilter.likelihood]} · ${cellFilter.stage}`;
+}
+
+document.querySelectorAll('th').forEach(th=>th.addEventListener('click',()=>{
+  const k=th.dataset.k; sortDir = sortKey===k ? -sortDir : 1; sortKey=k; renderTable();
+}));
+['q','fCat','fStage'].forEach(id=>$(id).addEventListener('input',renderTable));
+$('chipX').addEventListener('click',()=>{cellFilter=null; renderMatrix($('riskMatrix')); renderTable();});
+
+async function load(){
+  try{
+    const res = await fetch(API_URL,{credentials:'include'});
+    if(!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    risks = (Array.isArray(data)?data:data.risks||[]).map(enrich);
+  }catch(e){ console.warn('Using sample data – API not reachable:', e.message); }
+  fillCategories(); renderMatrix($('riskMatrix')); renderTable();
+}
+load();
+</script>
+</body>
+</html>

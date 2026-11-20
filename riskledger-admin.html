@@ -1,0 +1,636 @@
+<title>RiskLedger Admin Console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: app shell — top bar with tabs, register view (matrix + table), admin views as settings panels */
+:root{
+  --bg:#f5f6f4; --surface:#ffffff; --surface-2:#eef1ef; --fg:#1b2422; --muted:#5d6966; --line:#dbe1de;
+  --accent:#1f6f6b; --accent-fg:#ffffff; --accent-soft:#e1efed; --danger:#b83830; --focus:#2a8f89;
+  --font-display:"Space Grotesk","Segoe UI",system-ui,sans-serif;
+  --font-body:"Inter","Segoe UI",system-ui,sans-serif;
+  --font-mono:ui-monospace,Consolas,"Cascadia Mono",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121816; --surface:#1a2220; --surface-2:#222c29; --fg:#e6ecea; --muted:#9aa8a4; --line:#2f3b38;
+  --accent:#5cbcb4; --accent-fg:#0e1513; --accent-soft:#1f3532; --danger:#e0675f; --focus:#7fd3cc; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121816; --surface:#1a2220; --surface-2:#222c29; --fg:#e6ecea; --muted:#9aa8a4; --line:#2f3b38;
+  --accent:#5cbcb4; --accent-fg:#0e1513; --accent-soft:#1f3532; --danger:#e0675f; --focus:#7fd3cc; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.top-inner{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 0;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 24px}
+.brand{display:flex;align-items:baseline;gap:10px;padding-bottom:12px}
+.brand b{font-family:var(--font-display);font-size:20px;letter-spacing:-.01em}
+.brand span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;margin-left:auto}
+nav.tabs button{background:none;border:none;border-bottom:3px solid transparent;padding:10px 14px;font:500 14px var(--font-body);color:var(--muted);cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+nav.tabs .sep{width:1px;background:var(--line);margin:8px 6px}
+
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
+h1{font-size:24px} h2{font-size:18px} h3{font-size:15px}
+.section-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:28px 0 14px}
+.section-head p{margin:2px 0 0;color:var(--muted);flex-basis:100%}
+.section-head .grow{flex:1}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.pad{padding:18px}
+.muted{color:var(--muted)}
+.note{font-size:12px;color:var(--muted)}
+
+button.btn{font:500 13px var(--font-body);padding:8px 14px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;white-space:nowrap}
+button.btn:hover{background:var(--surface-2)}
+button.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+button.btn.danger{color:var(--danger);border-color:var(--danger)}
+button.btn.sm{padding:4px 9px;font-size:12px}
+button.icon{background:none;border:1px solid transparent;border-radius:6px;color:var(--muted);cursor:pointer;padding:3px 7px;font-size:14px;line-height:1}
+button.icon:hover{border-color:var(--line);color:var(--fg)}
+button.icon:disabled{opacity:.3;cursor:default}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+input,select,textarea{font:inherit;font-size:14px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%}
+textarea{resize:vertical;min-height:70px}
+input[type=checkbox]{width:auto;accent-color:var(--accent)}
+input[type=color]{width:38px;height:32px;padding:2px;cursor:pointer}
+label.fld{display:flex;flex-direction:column;gap:5px;font-weight:500;font-size:13px}
+label.fld .req{color:var(--danger)}
+
+/* Matrix */
+.matrix-panel{padding:18px 18px 12px}
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 22px;margin-bottom:12px;font-size:14px}
+.legend span{display:flex;align-items:center;gap:8px}
+.legend i{width:16px;height:16px;border-radius:50%}
+.mx{display:grid;grid-template-columns:auto 1fr auto;column-gap:10px}
+.mx-yt{grid-column:1;grid-row:1;padding:0 0 6px 6px;color:var(--muted);font-size:13px}
+.mx-yl{grid-column:1;grid-row:2;display:grid;font-size:13px}
+.mx-yl div{display:flex;align-items:center;justify-content:flex-end;text-align:right}
+.mx-grid{grid-column:2;grid-row:2;display:grid;border-left:2px solid var(--fg);border-bottom:2px solid var(--fg);min-width:0}
+.mx-cell{border:1px solid rgba(255,255,255,.55);display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 4px;color:#fff;min-height:110px;min-width:0}
+.mx-cell h4{margin:0;font:600 15px var(--font-body);text-align:center;text-shadow:0 1px 1px rgba(0,0,0,.18)}
+.mx-dots{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.dot{width:46px;height:46px;border-radius:50%;border:none;color:#fff;font:700 18px var(--font-body);cursor:pointer;opacity:.92;transition:transform .15s}
+.dot:hover{transform:scale(1.08);opacity:1}
+.dot.on{box-shadow:0 0 0 3px #fff,0 0 0 5px #1b2422}
+.mx-xl{grid-column:2;grid-row:3;display:grid;text-align:center;font-size:13px;padding-top:8px}
+.mx-xt{grid-column:3;grid-row:2;writing-mode:vertical-rl;transform:rotate(180deg);align-self:end;color:var(--muted);font-size:13px}
+.mx.n5 .mx-cell{min-height:84px}
+.mx.n5 .dot{width:32px;height:32px;font-size:13px}
+.mx.n5 .mx-cell h4{font-size:12px}
+
+/* Table */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.toolbar input[type=search]{flex:1;min-width:180px;width:auto}
+.toolbar select{width:auto}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--fg);color:var(--bg);border-radius:14px;padding:4px 10px;font-size:12px}
+.chip button{background:none;border:none;color:inherit;cursor:pointer;padding:0;font-size:14px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+td.ref{font-family:var(--font-mono);color:var(--muted);white-space:nowrap}
+.pill{display:inline-block;padding:2px 9px;border-radius:11px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
+.row-actions{white-space:nowrap;text-align:right}
+.num{font-variant-numeric:tabular-nums}
+
+/* Admin: fields */
+.flist{display:flex;flex-direction:column}
+.frow{display:grid;grid-template-columns:auto minmax(140px,1.4fr) minmax(110px,1fr) minmax(110px,1fr) auto auto auto;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.frow:last-child{border-bottom:none}
+.frow.head{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--surface-2);border-radius:10px 10px 0 0}
+.frow .move{display:flex;flex-direction:column}
+.frow .key{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.tag{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:1px 6px;margin-left:6px}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap}
+@media (max-width:760px){
+  .frow{grid-template-columns:auto 1fr auto}
+  .frow.head{display:none}
+  .frow .c-type,.frow .c-list{grid-column:2}
+  .frow .c-flags{grid-column:2;display:flex;gap:12px}
+}
+
+/* Admin: lists */
+.lists{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.list-card{display:flex;flex-direction:column;gap:10px}
+.list-card header{display:flex;align-items:center;gap:8px}
+.list-card header h3{flex:1}
+.vals{display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto}
+.val{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;background:var(--surface-2)}
+.val input{border:none;background:transparent;padding:3px 4px}
+.add-row{display:flex;gap:6px}
+
+/* Admin: scoring */
+.score-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.score-grid{grid-template-columns:1fr}}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:none;background:var(--surface);padding:7px 14px;font:500 13px var(--font-body);color:var(--fg);cursor:pointer}
+.seg button.on{background:var(--accent);color:var(--accent-fg)}
+.lvl-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin-bottom:8px}
+.axis-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.axis-cols .stack{display:flex;flex-direction:column;gap:6px}
+.edit-grid .mx-cell{cursor:pointer;min-height:64px;justify-content:center}
+.edit-grid .mx-cell:hover{filter:brightness(1.08)}
+
+/* Data */
+.data-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.data-grid textarea{font-family:var(--font-mono);font-size:12px;min-height:220px}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px}
+
+/* Modal + toast */
+.overlay{position:fixed;inset:0;background:rgba(10,16,14,.5);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 40px) 16px 24px;overflow:auto}
+.modal{background:var(--surface);border-radius:12px;width:min(640px,100%);box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal header{display:flex;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line)}
+.modal header h2{flex:1}
+.modal .body{padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.modal .body .full{grid-column:1/-1}
+@media (max-width:560px){.modal .body{grid-template-columns:1fr}}
+.modal footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--line)}
+.err{color:var(--danger);font-size:12px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:13px;z-index:30}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:560px){
+  .mx-cell{min-height:80px}.mx-cell h4{font-size:11px}.dot{width:30px;height:30px;font-size:13px}
+}
+</style>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><b>RiskLedger</b><span>Admin console</span></div>
+    <nav class="tabs" role="tablist">
+      <button data-view="register" aria-selected="true">Risk register</button>
+      <span class="sep"></span>
+      <button data-view="fields">Fields</button>
+      <button data-view="lists">Dropdown lists</button>
+      <button data-view="scoring">Scoring &amp; matrix</button>
+      <button data-view="data">Import / export</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="v-register"></section>
+  <section id="v-fields" hidden></section>
+  <section id="v-lists" hidden></section>
+  <section id="v-scoring" hidden></section>
+  <section id="v-data" hidden></section>
+</main>
+<div id="modalRoot"></div>
+
+<script>
+/* ======================= Defaults ======================= */
+const LEVEL_COLORS = {low:'#93c58a', medium:'#f0aa48', serious:'#b83830', critical:'#7a1f1a'};
+function defaultGrid(n){
+  // level by score (impact+1)*(likelihood+1), scaled for the matrix size
+  const g=[]; for(let i=0;i<n;i++){g.push([]);for(let l=0;l<n;l++){
+    const s=(i+1)*(l+1), max=n*n;
+    g[i].push(n===3 ? [['low','low','medium'],['medium','serious','serious'],['serious','serious','serious']][i][l]
+      : s>=max*0.6?'serious': s>=max*0.3?'medium':'low');
+  }} return g;
+}
+const AXES = {
+  3:{impact:['Low','Medium','High'], likelihood:['Low','Medium','High']},
+  5:{impact:['Insignificant','Minor','Moderate','Major','Severe'], likelihood:['Rare','Unlikely','Possible','Likely','Almost certain']}
+};
+const DEFAULT_CONFIG = {
+  version:1,
+  refPrefix:'R',
+  size:3,
+  impact:[...AXES[3].impact], likelihood:[...AXES[3].likelihood],
+  levels:[
+    {key:'low',name:'Low Risk',color:LEVEL_COLORS.low},
+    {key:'medium',name:'Medium Risk',color:LEVEL_COLORS.medium},
+    {key:'serious',name:'Serious Risk',color:LEVEL_COLORS.serious}
+  ],
+  grid:defaultGrid(3),
+  stages:[{key:'analysis',name:'Analysis',color:'#5fb3b3'},{key:'treatment',name:'Treatment',color:'#b39ddb'}],
+  lists:{
+    category:['Applications','Asset Management','Business Continuity','Compliance','Cybersecurity','Data Protection','Endpoint','Facilities IT','Governance','Identity & Access','Infrastructure','Licensing','Network','People','Physical Security','Security Operations','Service Management','Third Party','Vulnerability Mgmt'],
+    owner:['Endpoint Lead','ERP Lead','InfoSec Officer','IT Infrastructure Lead','IT Manager','IT Support Lead','Network Administrator','Records Officer','System Administrator','Web Administrator'],
+    status:['Open','In progress','Monitoring','Closed'],
+    treatmentType:['Mitigate','Accept','Transfer','Avoid']
+  },
+  listNames:{category:'Category',owner:'Owner',status:'Status',treatmentType:'Treatment type'},
+  fields:[
+    {key:'title',label:'Risk',type:'text',required:true,inTable:true,system:true},
+    {key:'category',label:'Category',type:'select',list:'category',required:true,inTable:true},
+    {key:'owner',label:'Owner',type:'select',list:'owner',required:true,inTable:true},
+    {key:'impact',label:'Impact',type:'scale',required:true,inTable:true,system:true},
+    {key:'likelihood',label:'Likelihood',type:'scale',required:true,inTable:true,system:true},
+    {key:'stage',label:'Stage',type:'stage',required:true,inTable:true,system:true},
+    {key:'status',label:'Status',type:'select',list:'status',required:false,inTable:true},
+    {key:'treatmentType',label:'Treatment type',type:'select',list:'treatmentType',required:false,inTable:false},
+    {key:'treatment',label:'Treatment / control',type:'textarea',required:false,inTable:true},
+    {key:'due',label:'Review date',type:'date',required:false,inTable:true}
+  ]
+};
+const SYSTEM_TYPES = {scale:'Matrix scale',stage:'Stage'};
+const FIELD_TYPES = {text:'Short text',textarea:'Long text',number:'Number',date:'Date',select:'Dropdown',checkbox:'Yes / No'};
+
+/* Sample risks (examples) — [title, category, owner, impact, likelihood, stage, treatment, review date] */
+const L=0,M=1,H=2;
+const SAMPLE=[
+['Ransomware encrypts file servers','Cybersecurity','InfoSec Officer',H,L,'analysis','Assess offline backup coverage and EDR rollout gaps','2026-12-15'],
+['Data centre fire / power failure','Business Continuity','IT Infrastructure Lead',H,L,'analysis','Review DR site readiness and UPS capacity','2027-01-10'],
+['Compromise of domain admin account','Identity & Access','System Administrator',H,L,'analysis','Evaluate tiered admin model and PAM options','2026-12-20'],
+['Oracle EBS database corruption','Applications','ERP Lead',H,L,'analysis','Validate RMAN backup restore testing','2027-01-05'],
+['Loss of core switch at head office','Network','Network Administrator',H,L,'treatment','Procure redundant core switch; HA config','2026-12-31'],
+['Mass phishing leading to credential theft','Cybersecurity','InfoSec Officer',H,L,'treatment','Enforce Office 365 MFA; awareness training','2026-12-10'],
+['Unpatched internet-facing server exploited','Vulnerability Mgmt','System Administrator',H,L,'treatment','Monthly OpenVAS scans + patch SLA','2026-12-05'],
+['Insider exfiltration via USB','Data Protection','InfoSec Officer',H,L,'treatment','Guardware DLP USB blocking policy','2026-12-12'],
+['FortiGate firewall misconfiguration','Network','Network Administrator',H,L,'treatment','Change approval + quarterly rule review','2027-01-15'],
+['Backup jobs silently failing','Business Continuity','IT Infrastructure Lead',H,L,'treatment','Daily backup monitoring and alerts','2026-12-08'],
+['ESXi host compromise','Infrastructure','System Administrator',H,L,'treatment','Isolate management network; harden hosts','2026-12-18'],
+['Legacy AV unable to detect modern threats','Endpoint','Endpoint Lead',H,L,'treatment','Migrate Trend Micro to Kaspersky EDR Optimum','2026-12-22'],
+['Business email compromise / invoice fraud','Cybersecurity','InfoSec Officer',H,M,'analysis','Assess mail flow rules and payment verification','2026-12-14'],
+['Shared/generic accounts used for ERP','Identity & Access','ERP Lead',H,M,'analysis','Review EBS user list for shared IDs','2027-01-08'],
+['No centralised log monitoring (SOC)','Security Operations','InfoSec Officer',H,M,'analysis','Scope Wazuh-based AI SOC','2027-01-20'],
+['Weak passwords stored in spreadsheets','Identity & Access','System Administrator',H,M,'analysis','Evaluate Passbolt adoption across teams','2026-12-30'],
+['Single ISP link for head office','Network','Network Administrator',H,M,'analysis','Assess secondary ISP + SD-WAN failover','2027-01-12'],
+['Unauthorised cloud file sharing','Data Protection','InfoSec Officer',H,M,'treatment','SharePoint external sharing restrictions','2026-12-16'],
+['Expired M365 licences disrupt users','Licensing','IT Manager',H,M,'treatment','Track renewal timeline; budget approval','2026-12-01'],
+['Wi-Fi bandwidth abuse on guest SSID','Network','Network Administrator',M,L,'analysis','Review Ruckus traffic stats per SSID','2027-01-03'],
+['Outdated asset inventory','Asset Management','IT Support Lead',M,L,'analysis','Reconcile desktop prep checklist with AD','2026-12-28'],
+['Software licence non-compliance','Licensing','IT Manager',M,L,'analysis','Audit installed software vs entitlements','2027-01-18'],
+['Vendor remote access not monitored','Third Party','InfoSec Officer',M,L,'analysis','Inventory vendor VPN accounts','2026-12-26'],
+['Printer/scanner firmware vulnerabilities','Endpoint','IT Support Lead',M,L,'analysis','Scan MFPs; check firmware levels','2027-01-22'],
+['Records retention not defined','Governance','Records Officer',M,L,'analysis','Draft retention schedule for RMS','2027-02-01'],
+['Key IT staff dependency','People','IT Manager',M,L,'analysis','Identify single points of knowledge','2027-01-25'],
+['Domain/SSL certificate expiry','Infrastructure','System Administrator',M,L,'analysis','Build certificate expiry tracker','2026-12-19'],
+['CCTV DVRs exposed on network','Physical Security','Network Administrator',M,L,'analysis','Segment CCTV VLAN; change defaults','2027-01-14'],
+['Rogue DHCP / unmanaged devices','Network','Network Administrator',M,L,'treatment','DHCP snooping; NAC review','2026-12-11'],
+['Local admin rights on user PCs','Endpoint','System Administrator',M,L,'treatment','Remove local admin via GPO + LAPS','2026-12-09'],
+['Windows Firewall disabled on endpoints','Endpoint','System Administrator',M,L,'treatment','Domain-wide firewall GPO','2026-12-13'],
+['Inconsistent desktop build standards','Asset Management','IT Support Lead',M,L,'treatment','Desktop preparation verification checklist','2026-12-04'],
+['Software deployed manually / unpatched apps','Endpoint','IT Support Lead',M,L,'treatment','opsi software deployment server','2027-01-06'],
+['Policies not reviewed annually','Governance','IT Manager',M,L,'treatment','Track policies and reviews in Eramba GRC','2027-01-30'],
+['ISO 9001 IT CA/PA not closed','Compliance','IT Manager',M,L,'treatment','Collect job descriptions; close CA/PA','2026-12-02'],
+['Staff unaware of security policies','People','InfoSec Officer',M,L,'treatment','Monthly awareness posters and emails','2026-12-17'],
+['Change management not documented','Governance','IT Manager',M,L,'treatment','Introduce change request form','2027-01-09'],
+['Helpdesk tickets not tracked','Service Management','IT Support Lead',M,M,'analysis','Evaluate ticketing tool options','2027-01-16'],
+['Shadow IT SaaS subscriptions','Governance','IT Manager',M,M,'analysis','Survey departments for SaaS usage','2027-01-28'],
+['Email delivery issues across O365/Google','Applications','System Administrator',M,M,'analysis','Review SPF/DKIM/DMARC on all domains','2026-12-23'],
+['Spam and malicious attachments reaching users','Cybersecurity','InfoSec Officer',M,H,'analysis','Analyse mail filter effectiveness','2026-12-07'],
+['Website defacement / malware injection','Applications','Web Administrator',M,H,'treatment','WordPress hardening + third-party scan','2026-12-06'],
+['Outdated end-of-life OS on PCs','Endpoint','IT Support Lead',M,H,'treatment','Replace/upgrade Windows 7/8 machines','2027-02-15'],
+['Meeting room AV equipment failure','Facilities IT','IT Support Lead',L,L,'treatment','Keep spare HDMI/adapters; quarterly checks','2027-02-10'],
+];
+function sampleRisks(){
+  return SAMPLE.map((r,i)=>({id:'r'+(i+1), ref:'R-'+String(i+1).padStart(3,'0'),
+    title:r[0],category:r[1],owner:r[2],impact:r[3],likelihood:r[4],stage:r[5],
+    status:r[5]==='treatment'?'In progress':'Open',treatmentType:r[5]==='treatment'?'Mitigate':'',treatment:r[6],due:r[7]}));
+}
+
+/* ======================= State ======================= */
+const KEY_CFG='rl-admin-config-v1', KEY_RISKS='rl-admin-risks-v1', KEY_TAB='rl-admin-tab';
+const clone=o=>JSON.parse(JSON.stringify(o));
+function load(k,fb){try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb;}catch(e){return fb;}}
+function save(){try{localStorage.setItem(KEY_CFG,JSON.stringify(cfg));localStorage.setItem(KEY_RISKS,JSON.stringify(risks));}catch(e){}}
+let cfg=load(KEY_CFG,clone(DEFAULT_CONFIG));
+let risks=load(KEY_RISKS,sampleRisks());
+let cellFilter=null, sortKey='score', sortDir=-1, view='register';
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const slug=s=>String(s).trim().replace(/[^a-zA-Z0-9]+(.)?/g,(m,c)=>c?c.toUpperCase():'').replace(/^./,c=>c.toLowerCase())||'field';
+const levelOf=r=>cfg.levels.find(l=>l.key===(cfg.grid[r.impact]||[])[r.likelihood])||{name:'—',color:'#999'};
+const stageOf=k=>cfg.stages.find(s=>s.key===k)||{name:k,color:'#999'};
+const score=r=>(r.impact+1)*(r.likelihood+1);
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200);}
+function commit(msg){save();render();if(msg)toast(msg);}
+
+/* ======================= Tabs ======================= */
+document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
+function show(v){
+  view=v;try{localStorage.setItem(KEY_TAB,v);}catch(e){}
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===v));
+  document.querySelectorAll('main>section').forEach(s=>s.hidden=s.id!=='v-'+v);
+  render();
+}
+function render(){({register:renderRegister,fields:renderFields,lists:renderLists,scoring:renderScoring,data:renderData})[view]();}
+
+/* ======================= Matrix ======================= */
+function matrixHTML(opts={}){
+  const n=cfg.size, cnt={};
+  if(!opts.edit) risks.forEach(r=>{const k=`${r.impact}-${r.likelihood}-${r.stage}`;cnt[k]=(cnt[k]||0)+1;});
+  let cells='';
+  for(let i=n-1;i>=0;i--)for(let l=0;l<n;l++){
+    const lv=cfg.levels.find(x=>x.key===cfg.grid[i][l])||cfg.levels[0];
+    const dots=opts.edit?'':cfg.stages.map(s=>{const c=cnt[`${i}-${l}-${s.key}`];if(!c)return'';
+      const on=cellFilter&&cellFilter.i===i&&cellFilter.l===l&&cellFilter.s===s.key?' on':'';
+      return `<button class="dot${on}" style="background:${esc(s.color)}" data-i="${i}" data-l="${l}" data-s="${esc(s.key)}" title="${c} risk(s) in ${esc(s.name)} · Impact ${esc(cfg.impact[i])}, Likelihood ${esc(cfg.likelihood[l])}">${c}</button>`;}).join('');
+    cells+=`<div class="mx-cell" style="background:${esc(lv.color)}" ${opts.edit?`data-ei="${i}" data-el="${l}" role="button" tabindex="0" title="Click to change level"`:''}><h4>${esc(lv.name)}</h4>${dots?`<div class="mx-dots">${dots}</div>`:''}</div>`;
+  }
+  return `<div class="mx n${n}${opts.edit?' edit-grid':''}">
+    <div class="mx-yt">Impact</div>
+    <div class="mx-yl" style="grid-template-rows:repeat(${n},1fr)">${[...cfg.impact].reverse().map(a=>`<div>${esc(a)}</div>`).join('')}</div>
+    <div class="mx-grid" style="grid-template-columns:repeat(${n},minmax(0,1fr));grid-template-rows:repeat(${n},auto)">${cells}</div>
+    <div class="mx-xt">Likelihood</div>
+    <div class="mx-xl" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${cfg.likelihood.map(a=>`<div>${esc(a)}</div>`).join('')}</div>
+  </div>`;
+}
+
+/* ======================= Register ======================= */
+function cellValue(f,r){
+  const v=r[f.key];
+  if(f.key==='title')return esc(v);
+  if(f.type==='scale')return esc((f.key==='impact'?cfg.impact:cfg.likelihood)[v]);
+  if(f.type==='stage'){const s=stageOf(v);return `<span class="pill" style="background:${esc(s.color)}">${esc(s.name)}</span>`;}
+  if(f.type==='checkbox')return v?'Yes':'No';
+  if(f.type==='date')return `<span class="num" style="white-space:nowrap">${esc(v)}</span>`;
+  return esc(v);
+}
+function renderRegister(){
+  const el=$('#v-register'); const q=(el.querySelector('#q')||{}).value||''; const st=(el.querySelector('#fStage')||{}).value||'';
+  const cols=cfg.fields.filter(f=>f.inTable);
+  let list=risks.filter(r=>(!q||Object.values(r).join(' ').toLowerCase().includes(q.toLowerCase()))&&(!st||r.stage===st)
+    &&(!cellFilter||(r.impact===cellFilter.i&&r.likelihood===cellFilter.l&&r.stage===cellFilter.s)));
+  list.sort((a,b)=>{const x=sortKey==='score'?score(a):a[sortKey],y=sortKey==='score'?score(b):b[sortKey];return((x>y)-(x<y))*sortDir||a.ref.localeCompare(b.ref);});
+  el.innerHTML=`
+  <div class="section-head"><div><h1>Risk register</h1></div><div class="grow"></div>
+    <button class="btn primary" id="addRisk">+ Add risk</button>
+    <p>${risks.length} risks · ${cfg.size}×${cfg.size} matrix. The register starts with example IT risks; edit or delete them, or reset under Import / export.</p></div>
+  <div class="panel matrix-panel">
+    <div class="legend">${cfg.stages.map(s=>`<span><i style="background:${esc(s.color)}"></i>${esc(s.name)}</span>`).join('')}</div>
+    ${matrixHTML()}
+  </div>
+  <div class="section-head"><h2>Risks</h2></div>
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="Search risks, owners, controls…" value="${esc(q)}">
+    <select id="fStage"><option value="">All stages</option>${cfg.stages.map(s=>`<option value="${esc(s.key)}" ${st===s.key?'selected':''}>${esc(s.name)}</option>`).join('')}</select>
+    ${cellFilter?`<span class="chip">Impact ${esc(cfg.impact[cellFilter.i])} · Likelihood ${esc(cfg.likelihood[cellFilter.l])} · ${esc(stageOf(cellFilter.s).name)}<button id="clearCell" aria-label="Clear matrix filter">✕</button></span>`:''}
+    <span class="note" style="margin-left:auto">${list.length} of ${risks.length}</span>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th data-k="ref">Ref</th>${cols.map(f=>`<th data-k="${esc(f.key)}">${esc(f.label)}</th>`).join('')}<th data-k="score">Rating</th><th></th></tr></thead>
+    <tbody>${list.map(r=>{const lv=levelOf(r);return `<tr>
+      <td class="ref">${esc(r.ref)}</td>${cols.map(f=>`<td>${cellValue(f,r)}</td>`).join('')}
+      <td style="white-space:nowrap"><span class="pill" style="background:${esc(lv.color)}">${esc(lv.name)}</span> <span class="note num">${score(r)}/${cfg.size*cfg.size}</span></td>
+      <td class="row-actions"><button class="icon" data-edit="${esc(r.id)}" title="Edit">✎</button><button class="icon" data-del="${esc(r.id)}" title="Delete">🗑</button></td></tr>`;}).join('')
+      ||`<tr><td colspan="${cols.length+3}" class="empty">No risks match these filters.</td></tr>`}</tbody>
+  </table></div>`;
+  el.querySelector('#q').addEventListener('input',()=>{const p=el.querySelector('#q').selectionStart;renderRegister();const i=el.querySelector('#q');i.focus();i.setSelectionRange(p,p);});
+  el.querySelector('#fStage').addEventListener('change',renderRegister);
+  el.querySelector('#addRisk').addEventListener('click',()=>riskForm());
+  el.querySelector('#clearCell')?.addEventListener('click',()=>{cellFilter=null;renderRegister();});
+  el.querySelectorAll('.dot').forEach(d=>d.addEventListener('click',()=>{const f={i:+d.dataset.i,l:+d.dataset.l,s:d.dataset.s};
+    cellFilter=cellFilter&&cellFilter.i===f.i&&cellFilter.l===f.l&&cellFilter.s===f.s?null:f;renderRegister();}));
+  el.querySelectorAll('th[data-k]').forEach(th=>th.addEventListener('click',()=>{const k=th.dataset.k;sortDir=sortKey===k?-sortDir:1;sortKey=k;renderRegister();}));
+  el.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>riskForm(risks.find(r=>r.id===b.dataset.edit))));
+  el.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{const r=risks.find(x=>x.id===b.dataset.del);
+    confirmBox(`Delete ${r.ref}?`,`"${r.title}" will be removed from the register.`,'Delete risk',()=>{risks=risks.filter(x=>x!==r);commit(`${r.ref} deleted`);});}));
+}
+
+/* ======================= Modals ======================= */
+function modal(title,bodyHTML,footHTML){
+  $('#modalRoot').innerHTML=`<div class="overlay"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <header><h2>${esc(title)}</h2><button class="icon" data-close aria-label="Close">✕</button></header>${bodyHTML}<footer>${footHTML}</footer></div></div>`;
+  const root=$('#modalRoot');
+  root.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeModal));
+  root.querySelector('.overlay').addEventListener('click',e=>{if(e.target.classList.contains('overlay'))closeModal();});
+  setTimeout(()=>root.querySelector('input,select,textarea,button.primary')?.focus(),20);
+  return root;
+}
+function closeModal(){$('#modalRoot').innerHTML='';}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+function confirmBox(title,text,btn,onYes){
+  const r=modal(title,`<div class="body"><p class="full" style="margin:0">${esc(text)}</p></div>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn primary" id="yes" style="background:var(--danger);border-color:var(--danger)">${esc(btn)}</button>`);
+  r.querySelector('#yes').addEventListener('click',()=>{closeModal();onYes();});
+}
+function inputFor(f,v){
+  const id='f_'+f.key, req=f.required?'required':'';
+  switch(f.type){
+    case 'textarea':return `<textarea id="${id}" ${req}>${esc(v)}</textarea>`;
+    case 'number':return `<input type="number" id="${id}" value="${esc(v)}" ${req}>`;
+    case 'date':return `<input type="date" id="${id}" value="${esc(v)}" ${req}>`;
+    case 'checkbox':return `<input type="checkbox" id="${id}" ${v?'checked':''}>`;
+    case 'select':{const opts=cfg.lists[f.list]||[];return `<select id="${id}" ${req}><option value="">— Select —</option>${opts.map(o=>`<option ${o===v?'selected':''}>${esc(o)}</option>`).join('')}${v&&!opts.includes(v)?`<option selected>${esc(v)}</option>`:''}</select>`;}
+    case 'scale':{const ax=f.key==='impact'?cfg.impact:cfg.likelihood;return `<select id="${id}">${ax.map((a,i)=>`<option value="${i}" ${+v===i?'selected':''}>${i+1} · ${esc(a)}</option>`).join('')}</select>`;}
+    case 'stage':return `<select id="${id}">${cfg.stages.map(s=>`<option value="${esc(s.key)}" ${s.key===v?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`;
+    default:return `<input type="text" id="${id}" value="${esc(v)}" ${req}>`;
+  }
+}
+function riskForm(r){
+  const isNew=!r; r=r||{impact:0,likelihood:0,stage:cfg.stages[0]?.key};
+  const body=`<form class="body" id="rf" novalidate>${cfg.fields.map(f=>`<label class="fld ${['textarea','text'].includes(f.type)&&f.key!=='due'?'full':''}">
+      <span>${esc(f.label)}${f.required?' <span class="req">*</span>':''}</span>${inputFor(f,r[f.key]??'')}</label>`).join('')}
+    <div class="full err" id="rfErr"></div></form>`;
+  const root=modal(isNew?'Add risk':`Edit ${r.ref}`,body,`<button class="btn" data-close>Cancel</button><button class="btn primary" id="saveRisk">${isNew?'Add risk':'Save changes'}</button>`);
+  const submit=()=>{
+    const out={...r}, missing=[];
+    cfg.fields.forEach(f=>{const el=root.querySelector('#f_'+f.key);let v=f.type==='checkbox'?el.checked:el.value.trim();
+      if(f.type==='scale')v=+v; if(f.type==='number'&&v!=='')v=+v;
+      if(f.required&&(v===''||v==null))missing.push(f.label); out[f.key]=v;});
+    if(missing.length){root.querySelector('#rfErr').textContent='Fill in: '+missing.join(', ');return;}
+    if(isNew){const n=risks.reduce((m,x)=>Math.max(m,parseInt(String(x.ref).split('-')[1])||0),0)+1;
+      out.id='r'+Date.now();out.ref=`${cfg.refPrefix}-${String(n).padStart(3,'0')}`;risks.push(out);}
+    else risks[risks.indexOf(r)]=out;
+    closeModal();commit(isNew?`${out.ref} added`:`${out.ref} saved`);
+  };
+  root.querySelector('#saveRisk').addEventListener('click',submit);
+  root.querySelector('#rf').addEventListener('submit',e=>{e.preventDefault();submit();});
+}
+
+/* ======================= Admin: Fields ======================= */
+function renderFields(){
+  const el=$('#v-fields');
+  el.innerHTML=`<div class="section-head"><div><h1>Fields</h1></div><div class="grow"></div><button class="btn primary" id="addField">+ Add field</button>
+    <p>Choose which fields the risk form asks for, their order, and which show as table columns. Core fields can be renamed and reordered but not removed.</p></div>
+  <div class="panel flist">
+    <div class="frow head"><span></span><span>Label</span><span>Type</span><span>Dropdown list</span><span>Required</span><span>In table</span><span></span></div>
+    ${cfg.fields.map((f,i)=>`<div class="frow" data-i="${i}">
+      <div class="move"><button class="icon" data-up ${i===0?'disabled':''} aria-label="Move up">▲</button><button class="icon" data-down ${i===cfg.fields.length-1?'disabled':''} aria-label="Move down">▼</button></div>
+      <div><input value="${esc(f.label)}" data-label aria-label="Field label"><div class="key">${esc(f.key)}${f.system?'<span class="tag">core</span>':''}</div></div>
+      <div class="c-type">${f.system?`<span class="muted">${esc(SYSTEM_TYPES[f.type]||FIELD_TYPES[f.type])}</span>`:
+        `<select data-type aria-label="Field type">${Object.entries(FIELD_TYPES).map(([k,v])=>`<option value="${k}" ${f.type===k?'selected':''}>${v}</option>`).join('')}</select>`}</div>
+      <div class="c-list">${f.type==='select'?`<select data-list aria-label="Dropdown list">${Object.keys(cfg.lists).map(k=>`<option value="${esc(k)}" ${f.list===k?'selected':''}>${esc(cfg.listNames[k]||k)}</option>`).join('')}</select>`:'<span class="muted">—</span>'}</div>
+      <div class="c-flags"><label class="chk"><input type="checkbox" data-req ${f.required?'checked':''} ${f.system?'disabled':''}> Required</label></div>
+      <div class="c-flags"><label class="chk"><input type="checkbox" data-tbl ${f.inTable?'checked':''}> In table</label></div>
+      <div>${f.system?'':`<button class="icon" data-del aria-label="Delete field" title="Delete field">🗑</button>`}</div>
+    </div>`).join('')}
+  </div>
+  <p class="note" style="margin-top:10px">Field keys are fixed once created, so renaming a label never loses data already stored in risks.</p>`;
+  el.querySelector('#addField').addEventListener('click',addFieldForm);
+  el.querySelectorAll('.frow[data-i]').forEach(row=>{
+    const i=+row.dataset.i, f=cfg.fields[i];
+    row.querySelector('[data-up]').addEventListener('click',()=>{[cfg.fields[i-1],cfg.fields[i]]=[cfg.fields[i],cfg.fields[i-1]];commit();});
+    row.querySelector('[data-down]').addEventListener('click',()=>{[cfg.fields[i+1],cfg.fields[i]]=[cfg.fields[i],cfg.fields[i+1]];commit();});
+    row.querySelector('[data-label]').addEventListener('change',e=>{f.label=e.target.value.trim()||f.label;commit('Label saved');});
+    row.querySelector('[data-type]')?.addEventListener('change',e=>{f.type=e.target.value;if(f.type==='select'&&!f.list)f.list=Object.keys(cfg.lists)[0];commit('Field type changed');});
+    row.querySelector('[data-list]')?.addEventListener('change',e=>{f.list=e.target.value;commit('List linked');});
+    row.querySelector('[data-req]').addEventListener('change',e=>{f.required=e.target.checked;commit();});
+    row.querySelector('[data-tbl]').addEventListener('change',e=>{f.inTable=e.target.checked;commit();});
+    row.querySelector('[data-del]')?.addEventListener('click',()=>confirmBox(`Delete field "${f.label}"?`,
+      `The field leaves the form and table. Values already saved in risks are kept, so re-adding a field with the key "${f.key}" brings them back.`,'Delete field',
+      ()=>{cfg.fields.splice(i,1);commit('Field deleted');}));
+  });
+}
+function addFieldForm(){
+  const root=modal('Add field',`<div class="body">
+    <label class="fld full"><span>Label <span class="req">*</span></span><input id="nfLabel" placeholder="e.g. Risk source"></label>
+    <label class="fld"><span>Type</span><select id="nfType">${Object.entries(FIELD_TYPES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>
+    <label class="fld" id="nfListWrap" hidden><span>Dropdown list</span><select id="nfList">${Object.keys(cfg.lists).map(k=>`<option value="${esc(k)}">${esc(cfg.listNames[k]||k)}</option>`).join('')}<option value="__new">+ New list</option></select></label>
+    <label class="chk"><input type="checkbox" id="nfReq"> Required</label>
+    <label class="chk"><input type="checkbox" id="nfTbl" checked> Show in table</label>
+    <div class="full err" id="nfErr"></div></div>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn primary" id="nfSave">Add field</button>`);
+  const t=root.querySelector('#nfType');t.addEventListener('change',()=>root.querySelector('#nfListWrap').hidden=t.value!=='select');
+  root.querySelector('#nfSave').addEventListener('click',()=>{
+    const label=root.querySelector('#nfLabel').value.trim(); if(!label){root.querySelector('#nfErr').textContent='Give the field a label.';return;}
+    let key=slug(label),n=2; while(cfg.fields.some(f=>f.key===key)||['id','ref'].includes(key))key=slug(label)+n++;
+    const f={key,label,type:t.value,required:root.querySelector('#nfReq').checked,inTable:root.querySelector('#nfTbl').checked};
+    if(f.type==='select'){let l=root.querySelector('#nfList').value;if(l==='__new'){l=key;cfg.lists[l]=[];cfg.listNames[l]=label;}f.list=l;}
+    cfg.fields.push(f);closeModal();commit(`Field "${label}" added`);
+  });
+}
+
+/* ======================= Admin: Lists ======================= */
+function renderLists(){
+  const el=$('#v-lists');
+  const usedBy=k=>cfg.fields.filter(f=>f.type==='select'&&f.list===k).map(f=>f.label);
+  el.innerHTML=`<div class="section-head"><div><h1>Dropdown lists</h1></div><div class="grow"></div>
+    <div class="add-row"><input id="newList" placeholder="New list name" style="width:180px"><button class="btn primary" id="addList">+ Add list</button></div>
+    <p>Values people pick from in the risk form. Renaming a value here also updates every risk that uses it.</p></div>
+  <div class="lists">${Object.keys(cfg.lists).map(k=>{const u=usedBy(k);return `<div class="panel pad list-card" data-k="${esc(k)}">
+    <header><h3>${esc(cfg.listNames[k]||k)}</h3><span class="note">${cfg.lists[k].length} values</span>
+      <button class="icon" data-sort title="Sort A–Z">A↓</button>${u.length?'':`<button class="icon" data-dellist title="Delete list">🗑</button>`}</header>
+    <div class="note">${u.length?'Used by: '+u.map(esc).join(', '):'Not linked to a field yet'}</div>
+    <div class="vals">${cfg.lists[k].map((v,i)=>`<div class="val"><input value="${esc(v)}" data-vi="${i}" aria-label="Value"><button class="icon" data-rm="${i}" aria-label="Remove value">✕</button></div>`).join('')||'<div class="note">No values yet.</div>'}</div>
+    <div class="add-row"><input placeholder="Add a value" data-new aria-label="New value"><button class="btn sm" data-add>Add</button></div>
+  </div>`;}).join('')}</div>`;
+  el.querySelector('#addList').addEventListener('click',()=>{const name=el.querySelector('#newList').value.trim();if(!name)return;
+    let k=slug(name),n=2;while(cfg.lists[k])k=slug(name)+n++;cfg.lists[k]=[];cfg.listNames[k]=name;commit(`List "${name}" added`);});
+  el.querySelectorAll('.list-card').forEach(card=>{
+    const k=card.dataset.k, arr=cfg.lists[k];
+    const add=()=>{const i=card.querySelector('[data-new]');const v=i.value.trim();if(!v)return;if(arr.includes(v)){toast('That value is already in the list');return;}arr.push(v);commit();
+      setTimeout(()=>document.querySelector(`.list-card[data-k="${CSS.escape(k)}"] [data-new]`)?.focus(),0);};
+    card.querySelector('[data-add]').addEventListener('click',add);
+    card.querySelector('[data-new]').addEventListener('keydown',e=>{if(e.key==='Enter')add();});
+    card.querySelector('[data-sort]').addEventListener('click',()=>{arr.sort((a,b)=>a.localeCompare(b));commit('Sorted');});
+    card.querySelector('[data-dellist]')?.addEventListener('click',()=>confirmBox(`Delete list "${cfg.listNames[k]||k}"?`,'This list is not linked to any field.','Delete list',()=>{delete cfg.lists[k];delete cfg.listNames[k];commit('List deleted');}));
+    card.querySelectorAll('[data-vi]').forEach(inp=>inp.addEventListener('change',()=>{
+      const i=+inp.dataset.vi, old=arr[i], nv=inp.value.trim(); if(!nv||nv===old){inp.value=old;return;}
+      arr[i]=nv; const fk=cfg.fields.filter(f=>f.type==='select'&&f.list===k).map(f=>f.key); let n=0;
+      risks.forEach(r=>fk.forEach(key=>{if(r[key]===old){r[key]=nv;n++;}})); commit(n?`Renamed; ${n} risk(s) updated`:'Renamed');}));
+    card.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{const v=arr[+b.dataset.rm];
+      const fk=cfg.fields.filter(f=>f.type==='select'&&f.list===k).map(f=>f.key); const n=risks.filter(r=>fk.some(key=>r[key]===v)).length;
+      const go=()=>{arr.splice(+b.dataset.rm,1);commit('Value removed');};
+      n?confirmBox(`Remove "${v}"?`,`${n} risk(s) use this value. They keep it, but it won't be offered for new risks.`,'Remove value',go):go();}));
+  });
+}
+
+/* ======================= Admin: Scoring ======================= */
+function renderScoring(){
+  const el=$('#v-scoring');
+  el.innerHTML=`<div class="section-head"><div><h1>Scoring &amp; matrix</h1></div>
+    <p>Set the matrix size, the names of each scale point, the risk levels and which level each cell gets.</p></div>
+  <div class="score-grid">
+    <div class="panel pad" style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px"><h3 style="flex:1">Matrix</h3>
+        <div class="seg" role="group" aria-label="Matrix size"><button data-size="3" class="${cfg.size===3?'on':''}">3 × 3</button><button data-size="5" class="${cfg.size===5?'on':''}">5 × 5</button></div></div>
+      <p class="note" style="margin:0">Click a cell to cycle its risk level.</p>
+      ${matrixHTML({edit:true})}
+      <div class="btn-row"><button class="btn sm" id="resetGrid">Reset cells to default pattern</button></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="panel pad">
+        <div style="display:flex;align-items:center;margin-bottom:12px"><h3 style="flex:1">Risk levels</h3><button class="btn sm" id="addLevel">+ Level</button></div>
+        ${cfg.levels.map((l,i)=>`<div class="lvl-row" data-li="${i}"><input type="color" value="${esc(l.color)}" data-color aria-label="Colour"><input value="${esc(l.name)}" data-name aria-label="Level name">
+          <button class="icon" data-dl ${cfg.levels.length<=2?'disabled':''} aria-label="Delete level">🗑</button></div>`).join('')}
+      </div>
+      <div class="panel pad">
+        <div style="display:flex;align-items:center;margin-bottom:12px"><h3 style="flex:1">Stages (bubbles)</h3><button class="btn sm" id="addStage">+ Stage</button></div>
+        ${cfg.stages.map((s,i)=>`<div class="lvl-row" data-si="${i}"><input type="color" value="${esc(s.color)}" data-color aria-label="Colour"><input value="${esc(s.name)}" data-name aria-label="Stage name">
+          <button class="icon" data-ds ${cfg.stages.length<=1?'disabled':''} aria-label="Delete stage">🗑</button></div>`).join('')}
+      </div>
+    </div>
+  </div>
+  <div class="panel pad" style="margin-top:16px">
+    <h3 style="margin-bottom:12px">Scale labels</h3>
+    <div class="axis-cols">
+      ${['likelihood','impact'].map(ax=>`<div class="stack"><span class="note" style="text-transform:uppercase;letter-spacing:.06em">${ax==='impact'?'Impact':'Likelihood'} (1 = lowest)</span>
+        ${cfg[ax].map((a,i)=>`<label class="add-row" style="align-items:center"><span class="num muted" style="width:16px">${i+1}</span><input value="${esc(a)}" data-ax="${ax}" data-ai="${i}"></label>`).join('')}</div>`).join('')}
+    </div>
+    <div class="axis-cols" style="margin-top:14px"><label class="fld"><span>Risk reference prefix</span><input id="prefix" value="${esc(cfg.refPrefix)}" maxlength="6" style="max-width:120px"></label></div>
+  </div>`;
+  el.querySelectorAll('[data-size]').forEach(b=>b.addEventListener('click',()=>{const n=+b.dataset.size;if(n===cfg.size)return;
+    const from=cfg.size;
+    confirmBox(`Switch to a ${n}×${n} matrix?`,`Scale labels and cell levels reset to the ${n}×${n} defaults, and existing risks are mapped to the nearest point on the new scale.`,'Switch',()=>{
+      const map=v=>Math.round(v*(n-1)/(from-1));
+      risks.forEach(r=>{r.impact=map(r.impact);r.likelihood=map(r.likelihood);});
+      cfg.size=n;cfg.impact=[...AXES[n].impact];cfg.likelihood=[...AXES[n].likelihood];cfg.grid=defaultGrid(n);
+      ['low','medium','serious'].forEach(k=>{if(!cfg.levels.find(l=>l.key===k))cfg.levels.push({key:k,name:k[0].toUpperCase()+k.slice(1)+' Risk',color:LEVEL_COLORS[k]});});
+      cellFilter=null;commit(`Matrix is now ${n}×${n}`);});}));
+  el.querySelectorAll('[data-ei]').forEach(c=>{const cyc=()=>{const i=+c.dataset.ei,l=+c.dataset.el;
+      const idx=cfg.levels.findIndex(x=>x.key===cfg.grid[i][l]);cfg.grid[i][l]=cfg.levels[(idx+1)%cfg.levels.length].key;commit();
+      document.querySelector(`[data-ei="${i}"][data-el="${l}"]`)?.focus();};
+    c.addEventListener('click',cyc);c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();cyc();}});});
+  el.querySelector('#resetGrid').addEventListener('click',()=>{cfg.grid=defaultGrid(cfg.size);
+    cfg.grid=cfg.grid.map(r=>r.map(k=>cfg.levels.find(l=>l.key===k)?k:cfg.levels[0].key));commit('Cells reset');});
+  el.querySelectorAll('[data-li]').forEach(row=>{const l=cfg.levels[+row.dataset.li];
+    row.querySelector('[data-color]').addEventListener('change',e=>{l.color=e.target.value;commit();});
+    row.querySelector('[data-name]').addEventListener('change',e=>{l.name=e.target.value.trim()||l.name;commit('Level renamed');});
+    row.querySelector('[data-dl]').addEventListener('click',()=>{const fb=cfg.levels.find(x=>x!==l);
+      confirmBox(`Delete level "${l.name}"?`,`Cells using it change to "${fb.name}".`,'Delete level',()=>{
+        cfg.grid=cfg.grid.map(r=>r.map(k=>k===l.key?fb.key:k));cfg.levels=cfg.levels.filter(x=>x!==l);commit('Level deleted');});});});
+  el.querySelector('#addLevel').addEventListener('click',()=>{let k='level',n=1;while(cfg.levels.find(l=>l.key===k+n))n++;
+    cfg.levels.push({key:k+n,name:'New level',color:'#7a1f1a'});commit('Level added. Click matrix cells to use it.');});
+  el.querySelectorAll('[data-si]').forEach(row=>{const s=cfg.stages[+row.dataset.si];
+    row.querySelector('[data-color]').addEventListener('change',e=>{s.color=e.target.value;commit();});
+    row.querySelector('[data-name]').addEventListener('change',e=>{s.name=e.target.value.trim()||s.name;commit('Stage renamed');});
+    row.querySelector('[data-ds]').addEventListener('click',()=>{const fb=cfg.stages.find(x=>x!==s);const n=risks.filter(r=>r.stage===s.key).length;
+      confirmBox(`Delete stage "${s.name}"?`,n?`${n} risk(s) move to "${fb.name}".`:'No risks use this stage.','Delete stage',()=>{
+        risks.forEach(r=>{if(r.stage===s.key)r.stage=fb.key;});cfg.stages=cfg.stages.filter(x=>x!==s);commit('Stage deleted');});});});
+  el.querySelector('#addStage').addEventListener('click',()=>{let n=1;while(cfg.stages.find(s=>s.key==='stage'+n))n++;
+    cfg.stages.push({key:'stage'+n,name:'Monitoring',color:'#8aa0b8'});commit('Stage added');});
+  el.querySelectorAll('[data-ax]').forEach(i=>i.addEventListener('change',()=>{cfg[i.dataset.ax][+i.dataset.ai]=i.value.trim()||cfg[i.dataset.ax][+i.dataset.ai];commit('Label saved');}));
+  el.querySelector('#prefix').addEventListener('change',e=>{cfg.refPrefix=e.target.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'')||'R';commit('Prefix saved. Applies to new risks.');});
+}
+
+/* ======================= Import / export ======================= */
+function renderData(){
+  const el=$('#v-data');
+  el.innerHTML=`<div class="section-head"><div><h1>Import / export</h1></div>
+    <p>Settings and risks are saved in this browser. Copy the JSON to back them up, move them to another machine, or load them into RiskLedger's server.</p></div>
+  <div class="data-grid">
+    <div class="panel pad" style="display:flex;flex-direction:column;gap:10px"><h3>Register settings</h3>
+      <p class="note" style="margin:0">Fields, dropdown lists, scales, levels, stages and matrix cells.</p>
+      <textarea id="cfgJson" spellcheck="false" aria-label="Settings JSON">${esc(JSON.stringify(cfg,null,2))}</textarea>
+      <div class="btn-row"><button class="btn" data-copy="cfgJson">Copy</button><button class="btn primary" id="applyCfg">Apply pasted settings</button></div>
+      <div class="err" id="cfgErr"></div></div>
+    <div class="panel pad" style="display:flex;flex-direction:column;gap:10px"><h3>Risks</h3>
+      <p class="note" style="margin:0">${risks.length} risks. Impact and likelihood are stored as 0-based scale positions.</p>
+      <textarea id="riskJson" spellcheck="false" aria-label="Risks JSON">${esc(JSON.stringify(risks,null,2))}</textarea>
+      <div class="btn-row"><button class="btn" data-copy="riskJson">Copy</button><button class="btn primary" id="applyRisks">Apply pasted risks</button></div>
+      <div class="err" id="riskErr"></div></div>
+  </div>
+  <div class="panel pad" style="margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+    <div style="flex:1;min-width:220px"><h3>Start over</h3><p class="note" style="margin:4px 0 0">Restore the default settings and the 44 example risks.</p></div>
+    <button class="btn danger" id="resetCfg">Reset settings</button><button class="btn danger" id="resetRisks">Reset risks to examples</button><button class="btn danger" id="clearRisks">Delete all risks</button>
+  </div>`;
+  el.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>{const t=el.querySelector('#'+b.dataset.copy);
+    navigator.clipboard?.writeText(t.value).then(()=>toast('Copied'),()=>{t.select();toast('Press Ctrl+C to copy');})||(t.select(),toast('Press Ctrl+C to copy'));}));
+  el.querySelector('#applyCfg').addEventListener('click',()=>{try{const c=JSON.parse(el.querySelector('#cfgJson').value);
+      if(!Array.isArray(c.fields)||!Array.isArray(c.levels)||!Array.isArray(c.grid)||!c.lists)throw new Error('Missing fields, levels, grid or lists.');
+      if(c.grid.length!==c.size||c.impact.length!==c.size||c.likelihood.length!==c.size)throw new Error('Grid and scale labels must match the matrix size.');
+      cfg=c;cellFilter=null;commit('Settings applied');}catch(e){el.querySelector('#cfgErr').textContent='Not applied: '+e.message;}});
+  el.querySelector('#applyRisks').addEventListener('click',()=>{try{const r=JSON.parse(el.querySelector('#riskJson').value);
+      if(!Array.isArray(r))throw new Error('Expected a list of risks.');
+      r.forEach((x,i)=>{if(!x.id)x.id='r'+Date.now()+i;if(!x.ref)x.ref=`${cfg.refPrefix}-${String(i+1).padStart(3,'0')}`;
+        x.impact=Math.min(cfg.size-1,Math.max(0,+x.impact||0));x.likelihood=Math.min(cfg.size-1,Math.max(0,+x.likelihood||0));});
+      risks=r;cellFilter=null;commit(`${r.length} risks loaded`);}catch(e){el.querySelector('#riskErr').textContent='Not applied: '+e.message;}});
+  el.querySelector('#resetCfg').addEventListener('click',()=>confirmBox('Reset settings?','Fields, lists and matrix return to the defaults. Risks are kept.','Reset settings',()=>{
+    const n=cfg.size;cfg=clone(DEFAULT_CONFIG);if(n!==3)risks.forEach(r=>{r.impact=Math.round(r.impact*2/(n-1));r.likelihood=Math.round(r.likelihood*2/(n-1));});commit('Settings reset');}));
+  el.querySelector('#resetRisks').addEventListener('click',()=>confirmBox('Reset risks?','All current risks are replaced with the 44 example risks.','Reset risks',()=>{
+    risks=sampleRisks();if(cfg.size!==3)risks.forEach(r=>{r.impact=Math.round(r.impact*(cfg.size-1)/2);r.likelihood=Math.round(r.likelihood*(cfg.size-1)/2);});cellFilter=null;commit('Example risks restored');}));
+  el.querySelector('#clearRisks').addEventListener('click',()=>confirmBox('Delete all risks?',`All ${risks.length} risks are removed from this browser.`,'Delete all',()=>{risks=[];cellFilter=null;commit('All risks deleted');}));
+}
+
+/* ======================= Boot ======================= */
+show((()=>{try{const t=localStorage.getItem(KEY_TAB);return['register','fields','lists','scoring','data'].includes(t)?t:'register';}catch(e){return'register';}})());
+</script>

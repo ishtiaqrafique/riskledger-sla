@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SLA Management</title>
+<link rel="stylesheet" href="sla.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><a href="/" class="back" title="Back to RiskLedger">RiskLedger</a><span>SLA management</span></div>
+    <nav class="tabs" role="tablist">
+      <button data-view="contracts" aria-selected="true">Contracts</button>
+      <button data-view="reviews">Reviews</button>
+      <button data-view="reminders">Reminders</button>
+      <button data-view="settings" id="tabSettings">Settings</button>
+    </nav>
+  </div>
+</header>
+<div id="demoBanner" class="banner" hidden>Demo mode: the RiskLedger server isn't reachable, so this page shows example contracts. Changes aren't saved and no emails are sent.</div>
+<main class="wrap">
+  <section id="v-contracts"></section>
+  <section id="v-reviews" hidden></section>
+  <section id="v-reminders" hidden></section>
+  <section id="v-settings" hidden></section>
+</main>
+<div id="modalRoot"></div>
+<script src="sla-app.js"></script>
+</body>
+</html>
