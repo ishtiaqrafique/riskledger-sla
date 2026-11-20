@@ -20,7 +20,7 @@ bash install.sh            # default app folder: /opt/riskledger
 The installer backs up `server.js` and the package files, copies the module in, hooks it into
 `server.js`, adds `nodemailer`, rebuilds the containers and checks that `/sla.html` loads.
 
-Then open `https://<server>:8443/sla.html`, go to **Settings**, enter the SMTP details
+Then open RiskLedger and choose **Contracts & SLAs** in the menu (`https://<server>:8443/#sla`), go to **Settings**, enter the SMTP details
 (Office 365: `smtp.office365.com`, port 587, a mailbox with SMTP AUTH enabled) and send a test email.
 
 ## Files
@@ -29,6 +29,8 @@ Then open `https://<server>:8443/sla.html`, go to **Settings**, enter the SMTP d
 |---|---|
 | `sla.js` | `server/sla.js` (API, database tables, daily reminder job) |
 | `sla.html`, `sla.css`, `sla-app.js` | `public/` (SLA management page) |
+| `sla-embed.js` | `public/` (shows Contracts & SLAs inside the RiskLedger app, menu badge) |
+| `integrate.py` | adds the **Contracts & SLAs** menu item and `#sla` page to `public/index.html` |
 | `install.sh` | installer |
 | `riskledger-admin.html` | standalone risk register admin console (fields, lists, matrix) |
 | `risk-matrix.html` | standalone risk matrix + register page |

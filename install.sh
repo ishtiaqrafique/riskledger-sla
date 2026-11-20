@@ -34,6 +34,13 @@ install -m 0644 "$SRC_SERVER/sla.js"      "$APP/server/sla.js"
 install -m 0644 "$SRC_PUBLIC/sla.html"    "$APP/public/sla.html"
 install -m 0644 "$SRC_PUBLIC/sla.css"     "$APP/public/sla.css"
 install -m 0644 "$SRC_PUBLIC/sla-app.js"  "$APP/public/sla-app.js"
+[ -f "$SRC_PUBLIC/sla-embed.js" ] && install -m 0644 "$SRC_PUBLIC/sla-embed.js" "$APP/public/sla-embed.js"
+
+if [ -f "$HERE/integrate.py" ] && [ -f "$APP/public/sla-embed.js" ]; then
+  say "Adding Contracts & SLAs to the RiskLedger menu"
+  [ -f "$APP/public/index.html" ] && cp -a "$APP/public/index.html" "$APP/backup-$STAMP/index.html"
+  python3 "$HERE/integrate.py" "$APP/public/index.html" || die "Menu integration failed (index.html unchanged). The SLA page still works at /sla.html."
+fi
 
 say "Hooking the module into server.js"
 if grep -qF 'require("./sla")' "$APP/server/server.js"; then
@@ -72,9 +79,9 @@ done
 docker compose logs --tail=20 app || true
 if [ -n "$ok" ]; then
   IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
-  printf '\n\033[1;32mDone. Open https://%s:8443/sla.html and sign in.\033[0m\n' "${IP:-<server-ip>}"
+  printf '\n\033[1;32mDone. Open https://%s:8443/#sla (Contracts & SLAs in the RiskLedger menu).\033[0m\n' "${IP:-<server-ip>}"
   echo "Then go to Settings to set up email (SMTP) and send a test email."
-  echo "To undo: copy the files from $APP/backup-$STAMP back into $APP/server and run: docker compose up -d --build"
+  echo "To undo: copy server.js and package files from $APP/backup-$STAMP into $APP/server, index.html into $APP/public, then run: docker compose up -d --build"
 else
   die "sla.html did not answer with HTTP 200. Check the log above. Backup is in $APP/backup-$STAMP."
 fi

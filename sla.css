@@ -113,3 +113,9 @@ td.ref{font-family:var(--font-mono);color:var(--muted);white-space:nowrap}
 .hist{padding:8px 10px;border-left:3px solid var(--accent);background:var(--surface-2);border-radius:0 6px 6px 0;font-size:13px}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* Embedded inside RiskLedger (index.html #sla): RiskLedger's sidebar provides the branding */
+.embed .brand{display:none}
+.embed nav.tabs{margin-left:0}
+.embed .top-inner{padding-block:6px 0}
+.embed header.top{background:var(--bg)}

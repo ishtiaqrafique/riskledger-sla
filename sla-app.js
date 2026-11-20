@@ -2,6 +2,9 @@
    If the API is unreachable it runs in demo mode with example contracts. */
 (function () {
   "use strict";
+  const EMBED = new URLSearchParams(location.search).get("embed") === "1" && window.parent !== window;
+  if (EMBED) document.documentElement.classList.add("embed");
+  const notifyParent = () => { if (EMBED) window.parent.postMessage({ type: "sla-changed" }, location.origin); };
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -22,7 +25,7 @@
     if (body instanceof Blob || body instanceof ArrayBuffer) opt.body = body;
     else if (body !== undefined) { opt.body = JSON.stringify(body); opt.headers["Content-Type"] = "application/json"; }
     const res = await fetch("/api/sla" + path, opt);
-    if (res.status === 401) { location.href = "/login.html"; throw new Error("Signed out"); }
+    if (res.status === 401) { (EMBED ? window.top : window).location.href = "/login.html"; throw new Error("Signed out"); }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((data.errors && data.errors.join(" ")) || data.error || data.message || res.statusText);
     return data;
@@ -119,7 +122,7 @@
     render();
   }
   function render() { ({ contracts: renderContracts, reviews: renderReviews, reminders: renderReminders, settings: renderSettings })[view](); }
-  async function reload() { contracts = await store.list(); render(); }
+  async function reload() { contracts = await store.list(); render(); notifyParent(); }
 
   /* ---------------- Contracts ---------------- */
   function renderContracts() {
@@ -136,7 +139,7 @@
     const list = contracts.filter((c) => match(c) && (!q || [c.ref, c.title, c.vendor, c.service, c.owner].join(" ").toLowerCase().includes(q.toLowerCase())));
     el.innerHTML = `
       <div class="section-head"><h1>Contracts &amp; SLAs</h1><div class="grow"></div><button class="btn primary" id="addC">+ Add contract</button>
-        <p>Reminder emails go to each contract's recipients before it expires. Crossed-out reminders have already been sent.</p></div>
+        <p>Reminder emails go to each contract's recipients before it expires. Crossed-out reminder points have passed.</p></div>
       <div class="stats">
         <button class="stat ${filter === "all" ? "on" : ""}" data-f="all"><b>${counts.all}</b><span>All contracts</span></button>
         <button class="stat warn ${filter === "soon" ? "on" : ""}" data-f="soon"><b>${counts.soon}</b><span>Expiring within 90 days</span></button>
@@ -379,7 +382,7 @@
   (async function boot() {
     try {
       const res = await fetch("/api/me", { credentials: "same-origin" });
-      if (res.status === 401) { location.href = "/login.html"; return; }
+      if (res.status === 401) { (EMBED ? window.top : window).location.href = "/login.html"; return; }
       if (!res.ok) throw new Error("no api");
       user = await res.json();
       contracts = await live.list();
