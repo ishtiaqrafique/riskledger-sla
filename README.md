@@ -11,7 +11,7 @@ Adds contract / SLA tracking to a self-hosted RiskLedger (Node.js + PostgreSQL i
 
 ```bash
 cd /root
-wget github.com/OWNER/riskledger-sla/archive/refs/heads/main.tar.gz
+wget github.com/ishtiaqrafique/riskledger-sla/archive/refs/heads/main.tar.gz
 tar xzf main.tar.gz
 cd riskledger-sla-main
 bash install.sh            # default app folder: /opt/riskledger
